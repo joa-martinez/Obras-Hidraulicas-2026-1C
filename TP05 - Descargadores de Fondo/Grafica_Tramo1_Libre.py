@@ -57,8 +57,8 @@ H0_plena = H0_vals[-1]
 # ==========================================
 plt.figure(figsize=(9, 7))
 plt.plot(Q_vals, H0_vals, linewidth=2.5, color='#1f77b4', label='Curva de Descarga (Canal)')
-plt.plot(Q_max_q, H0_max_q, marker='o', color='#ff7f0e', markersize=7, zorder=5, label=f'Caudal Máximo (y = 0.938D)\nQ = {Q_max_q:.2f}')
-plt.plot(Q_plena, H0_plena, marker='o', color='#d62728', markersize=7, zorder=5, label=f'Sección Plena (y = D)\nQ = {Q_plena:.2f}')
+plt.plot(Q_max_q, H0_max_q, marker='o', color='#ff7f0e', markersize=7, zorder=5, label=f'Caudal Máximo (y = 0.938D)\nQ = {Q_max_q:.2f} ($m^3/s$)')
+plt.plot(Q_plena, H0_plena, marker='o', color='#d62728', markersize=7, zorder=5, label=f'Sección Plena (y = D)\nQ = {Q_plena:.2f} ($m^3/s$)')
 plt.title('Descarga Libre en Conductos Circulares (Tramo 1)', fontsize=14, fontweight='bold')
 plt.xlabel('Caudal Total $Q$ ($m^3/s$)', fontsize=12, fontweight='bold')
 plt.ylabel('Tirante de embalse $H_0$ (m)', fontsize=12, fontweight='bold')

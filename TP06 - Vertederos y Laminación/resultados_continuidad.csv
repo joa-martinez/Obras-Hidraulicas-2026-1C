@@ -1,0 +1,5 @@
+Escenario,Q max Entrada (m3/s),Q max Salida (m3/s),Vol Entrada (hm3),Vol Salida (hm3),Error Continuidad (%),Maximo Volumen (hm3),Maxima Cota (m IGN)
+Tr=100,432.0,74.47,77.7901,38.45,0.016,53.2232,29.37
+Tr=10000,695.3,233.68,126.9702,87.719,0.0147,78.0964,30.5
+Tr=10000,695.3,233.68,126.9702,87.719,0.0147,78.0964,30.5
+R=100 Lleno,432.0,216.34,77.7901,81.9609,0.0019,76.0022,30.42

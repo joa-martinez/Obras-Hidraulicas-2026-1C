@@ -427,9 +427,9 @@ class AplicacionOrificios:
         
         self.ax_tab4.plot(Q_vals_tab4, H0_vals_tab4, linewidth=2.5, color='#1f77b4', label='Curva de Descarga (Canal)')
         self.ax_tab4.plot(Q_max_q, H0_max_q, marker='o', color='#ff7f0e', markersize=7, zorder=5, 
-                          label=f'Caudal Máximo (y = 0.938D)\nQ = {Q_max_q:.2f}')
+                          label=f'Caudal Máximo (y = 0.938D)\nQ = {Q_max_q:.2f} $m^3/s$')
         self.ax_tab4.plot(Q_plena, H0_plena, marker='o', color='#d62728', markersize=7, zorder=5, 
-                          label=f'Sección Plena (y = D)\nQ = {Q_plena:.2f}')
+                          label=f'Sección Plena (y = D)\nQ = {Q_plena:.2f} $m^3/s$')
         
         self.ax_tab4.set_title('Descarga Libre en Conductos Circulares (Tramo 1)', fontsize=12, fontweight='bold')
         self.ax_tab4.set_xlabel('Caudal Total Q [m³/s]', fontweight='bold')

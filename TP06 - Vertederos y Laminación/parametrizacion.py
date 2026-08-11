@@ -4,56 +4,89 @@ from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 
 # ==========================================
-# 1. Parametrización V = a*Cota^2 + b*Cota + c
-# ==========================================
-cotas_v = np.array([24.00, 25.00, 26.25, 27.50, 28.75, 30.00, 31.25])
-volumen_v = np.array([0.00, 1.25, 6.35, 17.87, 38.11, 67.29, 105.99])
-
-# Ajuste cuadrático usando Cota IGN directamente
-coeffs_v = np.polyfit(cotas_v, volumen_v, 2)
-a, b, c = coeffs_v
-
-print("--- Parametrización Cota-Volumen ---")
-print(f"V = {a:.6f} * Cota^2 + {b:.6f} * Cota + {c:.6f}")
-
-# ==========================================
-# 2. Parametrización Q_fondo = d * sqrt(Cota - C0)
+# 1. Parametrización Q_fondo = d * sqrt(Cota - C0)
 # ==========================================
 df_q = pd.read_csv('datos/curva_descarga_H-Q.csv')
 cotas_q = df_q['Tirante (H) [m]'].values + 21.0
 q_vals = df_q['Caudal (Q) [m3/s]'].values
 
-# Ajuste de Dos Parámetros: Q = d * sqrt(Cota - C0)
-def func_raiz_desplazada(cota, d, c0):
-    return d * np.sqrt(np.maximum(0, cota - c0))
+# Ajuste de Tres Parámetros (Fondo + Vertedero)
+def func_global(cota, d, c0, e):
+    # El caudal de fondo se satura al alcanzar la cota del vertedero (29.30m)
+    cota_efectiva = np.where(cota > 29.30, 29.30, cota)
+    q_fondo = d * np.sqrt(np.maximum(0, cota_efectiva - c0))
+    q_vert = np.where(cota > 29.30, e * (np.maximum(0, cota - 29.30))**1.5, 0.0)
+    return q_fondo + q_vert
 
-popt, _ = curve_fit(func_raiz_desplazada, cotas_q, q_vals, p0=[25, 22.0])
-d_opt, c0_opt = popt
+popt, _ = curve_fit(func_global, cotas_q, q_vals, p0=[25.0, 22.0, 100.0])
+d_opt, c0_opt, e_opt = popt
 
-print(f"\n--- Parametrización Q_fondo (Modelo Optimizado) ---")
-print(f"Coeficiente d: {d_opt:.6f}")
-print(f"Cota de Origen (C0): {c0_opt:.6f} m IGN")
-print(f"Ecuación: Q = {d_opt:.4f} * sqrt(Cota - {c0_opt:.4f})")
+print(f"--- Parametrización Global (Fondo + Vertedero) ---")
+print(f"Coeficiente fondo d: {d_opt:.6f}")
+print(f"Cota de Origen fondo (C0): {c0_opt:.6f} m IGN")
+print(f"Coeficiente vertedero e: {e_opt:.6f}")
+print(f"Q_fondo (Cota < 29.30) = {d_opt:.4f} * sqrt(Cota - {c0_opt:.4f})")
+print(f"Q_fondo (Cota >= 29.30) = constante")
+print(f"Q_vert = {e_opt:.4f} * (Cota - 29.30)^1.5\n")
+
+# ==========================================
+# 2. Parametrización V(Z) con suavizado C1 en Z=3 (Cota 24)
+# ==========================================
+cotas_v = np.array([24.00, 25.00, 26.25, 27.50, 28.75, 30.00, 30.50])
+volumen_v = np.array([0.00, 1.25, 6.35, 17.87, 38.11, 67.29, 81.0])
+
+Z_v = cotas_v - 21.00
+m = 0.01 / (24.00 - c0_opt)
+
+# V(Z) = a*(Z-3)^2 + m*(Z-3) + 0.01
+def func_volumen_suavizado(Z, a_param):
+    return a_param * (Z - 3.00)**2 + m * (Z - 3.00) + 0.01
+
+popt_v, _ = curve_fit(func_volumen_suavizado, Z_v, volumen_v)
+a_opt = popt_v[0]
+
+# Variables exportadas para mantener compatibilidad con V = a*Z^2 + b*Z + c
+a = a_opt
+b = m - 6.0 * a_opt
+c = 0.01 - 3.0 * m + 9.0 * a_opt
+
+print("--- Parametrización Cota-Volumen (Continuidad C1 en Z=3) ---")
+print(f"V = {a_opt:.6f} * (Z - 3.00)^2 + {m:.6f} * (Z - 3.00) + 0.01")
+print(f"Equivalente a: V = {a:.6f}*Z^2 + {b:.6f}*Z + {c:.6f}")
 
 # ==========================================
 # 3. Validación Visual (Eje Y = Cota IGN)
 # ==========================================
-plt.figure(figsize=(14, 6))
+plt.figure(figsize=(12, 6))
 
 # Plot Volumen
 plt.subplot(1, 2, 1)
 plt.scatter(volumen_v, cotas_v, color='blue', label='Datos Originales', alpha=0.6)
 cota_v_smooth = np.linspace(cotas_v.min(), cotas_v.max(), 100)
-v_fit = a*cota_v_smooth**2 + b*cota_v_smooth + c
-plt.plot(v_fit, cota_v_smooth, 'r-', linewidth=2, label='Ajuste Cuadrático')
+z_smooth = cota_v_smooth - 21.00
+v_fit = a * z_smooth**2 + b * z_smooth + c
 
-eq_v = fr'$V = {a:.4f} \cdot Cota^2 {b:+.4f} \cdot Cota {c:+.4f}$'
-plt.text(0.05, 0.95, eq_v, transform=plt.gca().transAxes, fontsize=10, 
+# Rama lineal
+cota_v_linear = np.linspace(c0_opt, 24.0, 50)
+v_linear = (0.01 / (24.0 - c0_opt)) * (cota_v_linear - c0_opt)
+
+# Graficar como una sola curva continua
+cota_v_full = np.concatenate([cota_v_linear[:-1], cota_v_smooth])
+v_full = np.concatenate([v_linear[:-1], v_fit])
+plt.plot(v_full, cota_v_full, 'r-', linewidth=2, label='Ajuste Completo')
+
+eq_v_quad = fr'$V = {a_opt:.4f} (Z-3)^2 + {m:.4f} (Z-3) + 0.01$'
+pendiente = 0.01 / (24.0 - c0_opt)
+eq_v_lin = fr'$V = {pendiente:.6f} \cdot (Cota - {c0_opt:.4f})$'
+eq_text = eq_v_quad + '\n' + eq_v_lin
+
+plt.text(0.05, 0.95, eq_text, transform=plt.gca().transAxes, fontsize=10, 
          verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
 plt.ylabel('Cota IGN [m]')
 plt.xlabel('Volumen [hm3]')
 plt.title('Curva Cota-Volumen')
+plt.ylim(21.0, 31.0)
 plt.legend(loc='lower right')
 plt.grid(True, linestyle='--', alpha=0.7)
 
@@ -61,21 +94,44 @@ plt.grid(True, linestyle='--', alpha=0.7)
 plt.subplot(1, 2, 2)
 plt.scatter(q_vals, cotas_q, color='blue', label='Datos Originales', s=5, alpha=0.3)
 
-# Se grafica Q en función de Cota empezando desde C0 para evitar la línea vertical en Q=0
-cota_q_smooth = np.linspace(c0_opt, 29.3, 300)
-q_fit = d_opt * np.sqrt(cota_q_smooth - c0_opt)
-plt.plot(q_fit, cota_q_smooth, 'g-', linewidth=2, label=r'Ajuste Optimizado')
+cota_q_smooth = np.linspace(c0_opt, 30.50, 300)
+q_fit = func_global(cota_q_smooth, d_opt, c0_opt, e_opt)
+plt.plot(q_fit, cota_q_smooth, 'g-', linewidth=2, label=r'Ajuste Global Optimizado')
 
-eq_q = fr'$Q = {d_opt:.4f} \cdot \sqrt{{Cota - {c0_opt:.4f}}}$'
-plt.text(0.05, 0.95, eq_q, transform=plt.gca().transAxes, fontsize=10, 
+eq_q1 = fr'$Q_f = {d_opt:.2f} \cdot \sqrt{{Cota - {c0_opt:.2f}}}$'
+eq_q2 = fr'$Q_v = {e_opt:.2f} \cdot (Cota - 29.30)^{{1.5}}$'
+plt.text(0.05, 0.95, eq_q1 + '\n' + eq_q2, transform=plt.gca().transAxes, fontsize=10, 
          verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
 plt.ylabel('Cota IGN [m]')
 plt.xlabel('Caudal [m3/s]')
-plt.title('Curva Cota-Caudal (Descarga de Fondo)')
+plt.title('Curva Cota-Caudal (Total)')
+plt.ylim(21.0, 31.0)
 plt.legend(loc='lower right')
 plt.grid(True, linestyle='--', alpha=0.7)
 
 plt.tight_layout()
 plt.savefig('validacion_parametrizacion.png')
-print("\nGráfica de validación consolidada guardada en 'validacion_parametrizacion.png'")
+print("\nGráfica de validación (Cota-Volumen y Cota-Caudal) guardada en 'validacion_parametrizacion.png'")
+
+# ==========================================
+# 4. Gráfica Separada: Volumen vs Caudal
+# ==========================================
+plt.figure(figsize=(8, 6))
+
+cota_common = np.linspace(c0_opt, 30.50, 300)
+v_common = np.where(cota_common < 24.0, 
+                    m * (cota_common - c0_opt), 
+                    a * (cota_common - 21.00)**2 + b * (cota_common - 21.00) + c)
+q_common = func_global(cota_common, d_opt, c0_opt, e_opt)
+
+plt.plot(v_common, q_common, color='purple', linewidth=2, label='Relación V-Q')
+plt.xlabel('Volumen [hm3]')
+plt.ylabel('Caudal [m3/s]')
+plt.title('Curva Volumen-Caudal')
+plt.legend(loc='lower right')
+plt.grid(True, linestyle='--', alpha=0.7)
+
+plt.tight_layout()
+plt.savefig('relacion_volumen_caudal.png')
+print("Gráfica de relación Volumen-Caudal guardada en 'relacion_volumen_caudal.png'")
