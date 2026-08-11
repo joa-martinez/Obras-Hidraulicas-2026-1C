@@ -5,7 +5,7 @@ from scipy.optimize import fsolve
 # ==========================================
 # Constantes Globales
 # ==========================================
-L = 15.0         # Longitud del orificio (m)
+L = 5.0         # Longitud del orificio (m)
 H = 3.1125         # Tirante de agua aguas abajo (m)
 
 # ==========================================

@@ -10,7 +10,7 @@ def calcular_Q_descarga_libre(H0, D, N, Z_inv=None, eta=0.015, S=0.005):
     nivel del agua no presuriza el conducto (hasta y=0.938*D).
     """
     if Z_inv is None:
-        Z_inv = D
+        Z_inv = D / 2
     y = H0 - Z_inv
     y = np.clip(y, 0, D*0.938)
     theta = 2 * np.arccos(1 - (2 * y) / D)
@@ -23,6 +23,33 @@ def calcular_Q_descarga_libre(H0, D, N, Z_inv=None, eta=0.015, S=0.005):
     
     Q = N * (1 / eta) * A * (R**(2/3)) * np.sqrt(S)
     return Q
+
+def calcular_Q_descarga_libre_completa(H0, D, N, Z_inv=None, eta=0.015, S=0.005):
+    """
+    Calcula el caudal (Q) para una sección circular funcionando como canal libre,
+    permitiendo el cálculo hasta la sección plena (y = D).
+    """
+    if Z_inv is None:
+        Z_inv = D / 2
+    y = H0 - Z_inv
+    
+    # Restringimos el dominio hasta D (sección plena)
+    y = np.clip(y, 0, D)
+    
+    # Protegemos el arcocoseno ante posibles errores de punto flotante en y=D
+    arg_arccos = np.clip(1 - (2 * y) / D, -1.0, 1.0)
+    theta = 2 * np.arccos(arg_arccos)
+    
+    A = (D**2 / 8) * (theta - np.sin(theta))
+    
+    term_sin_theta_div_theta = np.zeros_like(theta)
+    non_zero_mask = theta > 0
+    term_sin_theta_div_theta[non_zero_mask] = np.sin(theta[non_zero_mask]) / theta[non_zero_mask]
+    R = (D / 4) * (1 - term_sin_theta_div_theta)
+    
+    Q = N * (1 / eta) * A * (R**(2/3)) * np.sqrt(S)
+    
+    return Q, y
 
 def calcular_tramo3_pared_gruesa(y_vals, D, N_orificios, L_cond, eta=0.015, sum_xi=0.05):
     """
@@ -60,7 +87,7 @@ def generar_curva_descarga(D_constructivo, N, elevacion_base=None):
     Genera los datos de la curva de descarga H-Q para un diámetro y número de orificios dados.
     """
     if elevacion_base is None:
-        elevacion_base = D_constructivo
+        elevacion_base = D_constructivo / 2
         
     # TRAMO 1: Descarga Libre (Canal)
     H0_max_libre = elevacion_base + 0.938 * D_constructivo

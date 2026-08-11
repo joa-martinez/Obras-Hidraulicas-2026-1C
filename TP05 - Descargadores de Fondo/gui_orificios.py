@@ -151,7 +151,7 @@ class AplicacionOrificios:
         if d is None:
             return
 
-        elevacion_base = d
+        elevacion_base = d / 2
         H0_max_libre = elevacion_base + 0.938 * d
         H0_tramo_libre = np.linspace(elevacion_base, H0_max_libre, 100)
         
@@ -197,7 +197,7 @@ class AplicacionOrificios:
         if d is None:
             return
 
-        elevacion_base = d
+        elevacion_base = d / 2
         H0_min_tramo3 = elevacion_base + 2 * d
         H0_max_tramo3 = 8.30
 

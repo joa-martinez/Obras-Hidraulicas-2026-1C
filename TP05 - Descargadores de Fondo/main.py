@@ -16,7 +16,7 @@ from Calculo_Q_salida_orificios import (
     exportar_a_csv,
     L, H
 )
-from Curva_descarga import generar_curva_descarga
+from Curva_descarga import generar_curva_descarga, calcular_Q_descarga_libre_completa
 
 class AplicacionOrificios:
     def __init__(self, root):
@@ -40,6 +40,16 @@ class AplicacionOrificios:
         self.D_optimizado = None
         self.N_optimizado = None
         self.crear_tab2()
+
+        # Pestaña 3: Verificación Zona 1
+        self.tab3 = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab3, text='Verificación Zona 1')
+        self.crear_tab3()
+
+        # Pestaña 4: Detalle Tramo 1
+        self.tab4 = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab4, text='Detalle Tramo 1')
+        self.crear_tab4()
 
     def crear_tab1(self):
         # Marco principal (Izquierdo)
@@ -365,10 +375,101 @@ class AplicacionOrificios:
         self.ax_tab2.grid(True)
         self.ax_tab2.legend()
         self.canvas_tab2.draw()
+
+        # --- Actualizar Tab 3 (Verificación Zona 1) ---
+        self.ax_tab3.clear()
+        
+        H0_t1 = self.curva_data["T1"]["H"]
+        Q_t1 = self.curva_data["T1"]["Q"]
+        
+        H_canal_t1 = [calcular_H_desde_Q(q) for q in Q_t1]
+        
+        self.ax_tab3.plot(Q_t1, H0_t1, label="Cota Embalse (H0)", color='blue', linewidth=2)
+        self.ax_tab3.plot(Q_t1, H_canal_t1, label="Cota Canal Aguas Abajo (H)", color='red', linestyle='--', linewidth=2)
+        
+        # Rellenar área entre curvas: verde si verifica (H0 > H), rojo si no verifica (H0 < H)
+        H0_t1_arr = np.array(H0_t1)
+        H_canal_t1_arr = np.array(H_canal_t1)
+        
+        self.ax_tab3.fill_between(Q_t1, H_canal_t1_arr, H0_t1_arr, where=(H0_t1_arr >= H_canal_t1_arr), 
+                                  color='green', alpha=0.3, label='Escurrimiento Garantizado (H0 > H)', interpolate=True)
+        self.ax_tab3.fill_between(Q_t1, H_canal_t1_arr, H0_t1_arr, where=(H0_t1_arr < H_canal_t1_arr), 
+                                  color='red', alpha=0.3, label='NO Verifica (H0 < H)', interpolate=True)
+        
+        self.ax_tab3.set_xlabel("Caudal (Q) [m³/s]")
+        self.ax_tab3.set_ylabel("Cota [m]")
+        self.ax_tab3.set_title("Verificación de Escurrimiento (Zona 1)")
+        self.ax_tab3.grid(True)
+        self.ax_tab3.legend()
+        self.canvas_tab3.draw()
+
+        # --- Actualizar Tab 4 (Detalle Tramo 1) ---
+        self.ax_tab4.clear()
+        
+        d = self.D_optimizado
+        n = self.N_optimizado
+        elevacion_base = d / 2
+        
+        # Cota para Sección Plena (y = d)
+        H0_max_plena = elevacion_base + d
+        H0_vals_tab4 = np.linspace(elevacion_base, H0_max_plena, 200)
+        
+        Q_vals_tab4, _ = calcular_Q_descarga_libre_completa(H0_vals_tab4, d, n, Z_inv=elevacion_base)
+        
+        # Encontrar puntos notables
+        y_max_q = 0.938 * d
+        H0_max_q = elevacion_base + y_max_q
+        Q_max_q, _ = calcular_Q_descarga_libre_completa(np.array([H0_max_q]), d, n, Z_inv=elevacion_base)
+        Q_max_q = Q_max_q[0]
+        
+        Q_plena = Q_vals_tab4[-1]
+        H0_plena = H0_vals_tab4[-1]
+        
+        self.ax_tab4.plot(Q_vals_tab4, H0_vals_tab4, linewidth=2.5, color='#1f77b4', label='Curva de Descarga (Canal)')
+        self.ax_tab4.plot(Q_max_q, H0_max_q, marker='o', color='#ff7f0e', markersize=7, zorder=5, 
+                          label=f'Caudal Máximo (y = 0.938D)\nQ = {Q_max_q:.2f}')
+        self.ax_tab4.plot(Q_plena, H0_plena, marker='o', color='#d62728', markersize=7, zorder=5, 
+                          label=f'Sección Plena (y = D)\nQ = {Q_plena:.2f}')
+        
+        self.ax_tab4.set_title('Descarga Libre en Conductos Circulares (Tramo 1)', fontsize=12, fontweight='bold')
+        self.ax_tab4.set_xlabel('Caudal Total Q [m³/s]', fontweight='bold')
+        self.ax_tab4.set_ylabel('Cota de embalse H0 [m]', fontweight='bold')
+        self.ax_tab4.grid(True, linestyle='--', alpha=0.6)
+        self.ax_tab4.legend(loc='lower right')
+        
+        self.ax_tab4.set_xlim(0, max(Q_vals_tab4) * 1.1)
+        self.ax_tab4.set_ylim(elevacion_base * 0.9, H0_max_plena * 1.1)
+        self.canvas_tab4.draw()
         
         # Habilitar el botón de exportación
         self.export_button_tab2.config(state="normal")
         self.export_separados_button.config(state="normal")
+
+    def crear_tab3(self):
+        # Marco principal para la Pestaña 3
+        main_frame_tab3 = ttk.Frame(self.tab3, padding="15")
+        main_frame_tab3.pack(expand=True, fill="both")
+        
+        ttk.Label(main_frame_tab3, text="Comparativa de Cotas: Embalse vs Canal (Tramo 1)", font=("Helvetica", 12, "bold")).pack(pady=5)
+        
+        # Gráfico para la verificación
+        self.fig_tab3 = Figure(figsize=(8, 6), dpi=100)
+        self.ax_tab3 = self.fig_tab3.add_subplot(111)
+        self.canvas_tab3 = FigureCanvasTkAgg(self.fig_tab3, master=main_frame_tab3)
+        self.canvas_tab3.get_tk_widget().pack(expand=True, fill="both", pady=10)
+
+    def crear_tab4(self):
+        # Marco principal para la Pestaña 4
+        main_frame_tab4 = ttk.Frame(self.tab4, padding="15")
+        main_frame_tab4.pack(expand=True, fill="both")
+        
+        ttk.Label(main_frame_tab4, text="Detalle Hidráulico del Tramo 1 (Conducto Circular)", font=("Helvetica", 12, "bold")).pack(pady=5)
+        
+        # Gráfico para el detalle
+        self.fig_tab4 = Figure(figsize=(8, 6), dpi=100)
+        self.ax_tab4 = self.fig_tab4.add_subplot(111)
+        self.canvas_tab4 = FigureCanvasTkAgg(self.fig_tab4, master=main_frame_tab4)
+        self.canvas_tab4.get_tk_widget().pack(expand=True, fill="both", pady=10)
         
     def exportar_curva_csv(self):
         if self.curva_data is None:
@@ -412,7 +513,7 @@ class AplicacionOrificios:
 
             d = self.D_optimizado
             n = self.N_optimizado
-            elevacion_base = d
+            elevacion_base = d / 2
             
             # --- TRAMO 1 ---
             H0_t1 = self.curva_data["T1"]["H"]
