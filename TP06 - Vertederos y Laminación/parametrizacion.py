@@ -135,3 +135,37 @@ plt.grid(True, linestyle='--', alpha=0.7)
 plt.tight_layout()
 plt.savefig('relacion_volumen_caudal.png')
 print("Gráfica de relación Volumen-Caudal guardada en 'relacion_volumen_caudal.png'")
+
+# ==========================================
+# 5. Gráfica Separada: Cota vs Caudal Detallada
+# ==========================================
+import matplotlib.ticker as ticker
+
+plt.figure(figsize=(10, 8))
+
+plt.plot(q_fit, cota_q_smooth, 'g-', linewidth=2, label=r'Ajuste Global Optimizado')
+plt.scatter(q_vals, cotas_q, color='blue', label='Datos Originales', s=15, alpha=0.6)
+
+ax = plt.gca()
+# Ticks Y (Cota): Mayores cada 0.5 m, menores cada 0.1 m
+ax.yaxis.set_major_locator(ticker.MultipleLocator(0.5))
+ax.yaxis.set_minor_locator(ticker.MultipleLocator(0.1))
+
+# Ticks X (Caudal): Mayores cada 50 m3/s, menores cada 10 m3/s
+ax.xaxis.set_major_locator(ticker.MultipleLocator(50))
+ax.xaxis.set_minor_locator(ticker.MultipleLocator(10))
+
+plt.ylabel('Cota IGN [m]')
+plt.xlabel('Caudal [m3/s]')
+plt.title('Curva Cota-Caudal Detallada')
+plt.ylim(21.0, 31.0)
+plt.xlim(left=0)
+plt.legend(loc='lower right')
+
+# Activar la cuadrícula tanto para los ticks mayores como menores
+plt.grid(True, which='major', color='gray', linestyle='-', alpha=0.7)
+plt.grid(True, which='minor', color='lightgray', linestyle='--', alpha=0.5)
+
+plt.tight_layout()
+plt.savefig('curva_cota_caudal_detallada.png')
+print("Gráfica de Cota-Caudal detallada guardada en 'curva_cota_caudal_detallada.png'")
