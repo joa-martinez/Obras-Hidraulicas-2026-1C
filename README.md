@@ -4,3 +4,4 @@ Scripts utilizados para la resolución de los trabajos prácticos de la materia 
 - [TP02 - Erosión global y localizada](https://github.com/joa-martinez/Obras-Hidraulicas-2026-1C/tree/main/TP02%20-%20Erosi%C3%B3n%20global%20y%20localizada)
 - [TP03 - Volumen de Embalse](https://github.com/joa-martinez/Obras-Hidraulicas-2026-1C/tree/main/TP03%20-%20Volumen%20de%20Embalse)
 - [TP05 - Descargadores de Fondo](https://github.com/joa-martinez/Obras-Hidraulicas-2026-1C/tree/main/TP05%20-%20Descargadores%20de%20Fondo)
+- [TP06 - Vertederos y Laminación](https://github.com/joa-martinez/Obras-Hidraulicas-2026-1C/tree/main/TP06%20-%20Vertederos%20y%20Laminaci%C3%B3n)
