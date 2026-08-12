@@ -24,7 +24,7 @@ Donde:
 ### 2.3. Vertedero
 El escurrimiento por el vertedero de cresta libre inicia cuando el nivel del agua supera la cota de la cresta.
 - Cota de cresta del vertedero $= 29.30 \text{ m}$
-- Cota de coronamiento de la presa ($CCP$) $= 30.50 \text{ m}$
+- Nivel de Agua Máximo Extraordinario ($NAME$) $= 30.50 \text{ m}$
 - Longitud del vertedero ($L$) $= 45 \text{ m}$
 - Coeficiente de descarga ($C_d$) $= 4.03$
 
@@ -65,4 +65,4 @@ Para resolver la ecuación diferencial se emplea un esquema explícito de Euler 
      $$ \Delta Z = \frac{I(t_j) - Q_{total}(Z_j)}{A(Z_j)} \cdot \Delta t $$
    - **Paso E:** Actualizar la carga de agua para el intervalo $j+1$: 
      $$ Z_{j+1} = Z_j + \Delta Z $$
-4. **Verificación Estructural:** Al finalizar la integración en el tiempo total del hidrograma, el software filtra el arreglo de $Z_{sim}$ para hallar la cota pico. Se compara este máximo con la cota de coronamiento de la presa ($30.50 \text{ m}$). Si no se la supera, se informa el valor numérico de la revancha (freeboard disponible); si se la supera, el programa emite una advertencia crítica sobre el colapso (desborde) por rebase de la estructura. Este control de validez se aplicó tanto a $Tr=100$ como a $Tr=10000$ años.
+4. **Verificación Estructural:** Al finalizar la integración en el tiempo total del hidrograma, el software filtra el arreglo de $Z_{sim}$ para hallar la cota pico. Se compara este máximo con el NAME ($30.50 \text{ m}$). Si no se la supera, se informa el valor numérico de la revancha (freeboard disponible); si se la supera, el programa emite una advertencia crítica sobre el colapso (desborde) por rebase de la estructura. Este control de validez se aplicó tanto a $Tr=100$ como a $Tr=10000$ años.

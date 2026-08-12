@@ -127,7 +127,7 @@ def main():
     ax2.plot(tiempos / 3600, cota_sim, 'g-', label='Cota del Embalse (IGN)')
     ax2.axhline(C0, color='k', linestyle='--', label=f'Cota Fondo ({C0:.2f} m)')
     ax2.axhline(29.30, color='orange', linestyle='--', label='Cota Vertedero (29.30 m)')
-    ax2.axhline(30.50, color='purple', linestyle='--', label='Coronamiento Presa (30.50 m)')
+    ax2.axhline(30.50, color='purple', linestyle='--', label='NAME (30.50 m)')
     
     # Marcar Cota Máxima
     cota_max = np.max(cota_sim)
@@ -150,7 +150,7 @@ def main():
     print("Gráfico de laminación guardado en './resultados_laminacion10000.png'.")
     
     if cota_max > 30.50:
-        print(f"\nADVERTENCIA: La cota máxima ({cota_max:.2f} m) superó el coronamiento de la presa (30.50 m). PELIGRO DE DESBORDE!")
+        print(f"\nADVERTENCIA: La cota máxima ({cota_max:.2f} m) superó el NAME (30.50 m). PELIGRO DE DESBORDE!")
     else:
         print(f"\nLa presa no desborda. Revancha mínima: {30.50 - cota_max:.2f} m.")
 
