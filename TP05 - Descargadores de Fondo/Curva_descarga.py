@@ -129,10 +129,10 @@ if __name__ == '__main__':
     data = generar_curva_descarga(D_constructivo, N)
     
     plt.figure(figsize=(10, 8))
-    plt.plot(data['Q'], data['H'], label=f"D={D_constructivo}m, N={N}")
+    plt.plot(data['Q'], data['H'] + 21.0, label=f"D={D_constructivo}m, N={N}")
     plt.title('Curva de Descarga H-Q')
     plt.xlabel('Caudal (Q) [m³/s]')
-    plt.ylabel('Tirante (H) [m]')
+    plt.ylabel('Cota IGN [m]')
     plt.grid(True)
     plt.legend()
     plt.show()

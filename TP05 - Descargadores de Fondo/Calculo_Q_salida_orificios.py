@@ -241,12 +241,20 @@ if __name__ == "__main__":
                     # Redondear al múltiplo de 5cm (0.05m) superior
                     D_redondeado = math.ceil(round(D_exacto / 0.05, 4)) * 0.05
                     
+                    # Recalcular el equilibrio exacto con el D constructivo
+                    def equilibrio_opt(h_guess):
+                        h_g = float(h_guess[0])
+                        Q_ori = calcular_caudal_orificios(D_redondeado, N_input, h_g)[0]
+                        return Q_ori - calc_Q_reducida(h_g)
+                    
+                    H_final = fsolve(equilibrio_opt, H_input)[0]
+                    
                     # Recalcular parámetros con el D redondeado constructivo
-                    Q_final, mu_final, Z0_final, f_friccion_final, xi_final, eta_final = calcular_caudal_orificios(D_redondeado, N_input, H_input)
+                    Q_final, mu_final, Z0_final, f_friccion_final, xi_final, eta_final = calcular_caudal_orificios(D_redondeado, N_input, H_final)
                     
                     print("\n--- Resultados de la Optimización ---")
-                    mostrar_tabla_resultados(D_redondeado, xi_final, N_input, f_friccion_final, mu_final, Q_final, L, eta_final, Z0_final, H_input, Q_target, D_exacto)
-                    exportar_a_csv(D_redondeado, xi_final, N_input, f_friccion_final, mu_final, Q_final, L, eta_final, Z0_final, H_input, Q_target, D_exacto, archivo="resultados_optimizacion.csv")
+                    mostrar_tabla_resultados(D_redondeado, xi_final, N_input, f_friccion_final, mu_final, Q_final, L, eta_final, Z0_final, H_final, Q_target, D_exacto)
+                    exportar_a_csv(D_redondeado, xi_final, N_input, f_friccion_final, mu_final, Q_final, L, eta_final, Z0_final, H_final, Q_target, D_exacto, archivo="resultados_optimizacion.csv")
             
         else:
             print("Opción no válida. Por favor ejecute de nuevo y seleccione 1, 2 o 3.")

@@ -168,11 +168,11 @@ class AplicacionOrificios:
         H_vals = np.linspace(0, 4.5, 100)
         Q_vals = [calc_Q_reducida(h) for h in H_vals]
         
-        self.ax_tab1.plot(Q_vals, H_vals, label="Curva H-Q", color='#1f77b4', linewidth=2.5)
+        self.ax_tab1.plot(Q_vals, H_vals + 21.0, label="Curva H-Q", color='#1f77b4', linewidth=2.5)
         self.ax_tab1.set_xlim(0, 320)
-        self.ax_tab1.set_ylim(0, 4.5)
+        self.ax_tab1.set_ylim(21.0, 25.5)
         self.ax_tab1.set_xlabel("Caudal (Q) [m³/s]", fontweight='bold')
-        self.ax_tab1.set_ylabel("Tirante aguas abajo (H) [m]", fontweight='bold')
+        self.ax_tab1.set_ylabel("Cota IGN [m] (Canal de Descarga)", fontweight='bold')
         self.ax_tab1.set_title("Curva H-Q del Canal")
         self.ax_tab1.grid(True, linestyle='--', alpha=0.6)
         self.canvas_tab1.draw()
@@ -183,15 +183,15 @@ class AplicacionOrificios:
         H_vals = np.linspace(0, 4.5, 100)
         Q_vals = [calc_Q_reducida(h) for h in H_vals]
         
-        self.ax_tab1.plot(Q_vals, H_vals, label="Curva H-Q", color='#1f77b4', linewidth=2.5)
-        self.ax_tab1.plot(q_val, h_val, 'ro', markersize=8, label=f"Cálculo (Q={q_val:.2f}, H={h_val:.2f})")
+        self.ax_tab1.plot(Q_vals, H_vals + 21.0, label="Curva H-Q", color='#1f77b4', linewidth=2.5)
+        self.ax_tab1.plot(q_val, h_val + 21.0, 'ro', markersize=8, label=f"Cálculo (Q={q_val:.2f}, Cota IGN={h_val+21.0:.2f})")
         self.ax_tab1.axvline(q_val, color='red', linestyle='--', alpha=0.4)
-        self.ax_tab1.axhline(h_val, color='red', linestyle='--', alpha=0.4)
+        self.ax_tab1.axhline(h_val + 21.0, color='red', linestyle='--', alpha=0.4)
         
         self.ax_tab1.set_xlim(0, 320)
-        self.ax_tab1.set_ylim(0, 4.5)
+        self.ax_tab1.set_ylim(21.0, 25.5)
         self.ax_tab1.set_xlabel("Caudal (Q) [m³/s]", fontweight='bold')
-        self.ax_tab1.set_ylabel("Tirante aguas abajo (H) [m]", fontweight='bold')
+        self.ax_tab1.set_ylabel("Cota IGN [m] (Nivel del Embalse)", fontweight='bold')
         self.ax_tab1.set_title("Relación de Descarga H-Q")
         self.ax_tab1.grid(True, linestyle='--', alpha=0.6)
         self.ax_tab1.legend(loc="upper left")
@@ -279,11 +279,19 @@ class AplicacionOrificios:
             D_redondeado = np.ceil(round(D_exacto / 0.05, 4)) * 0.05
             self.D_optimizado = D_redondeado
             self.N_optimizado = n_val
-            Q_final, mu_final, Z0_final, f_friccion_final, xi_final, eta_final = calcular_caudal_orificios(D_redondeado, n_val, h_val)
+            
+            # Recalcular el equilibrio con el diámetro constructivo
+            def equilibrio_opt(h_guess):
+                h_g = float(h_guess[0])
+                Q_ori = calcular_caudal_orificios(D_redondeado, n_val, h_g)[0]
+                return Q_ori - calc_Q_reducida(h_g)
+            
+            h_final = fsolve(equilibrio_opt, h_val)[0]
+            Q_final, mu_final, Z0_final, f_friccion_final, xi_final, eta_final = calcular_caudal_orificios(D_redondeado, n_val, h_final)
             
             resultado = (f"Caudal objetivo [m³/s]        : {Q_target:.2f}\n"
                          f"Longitud del conducto (L) [m] : {L:.2f}\n"
-                         f"Tirante aguas abajo (H) [m]   : {h_val:.4f}\n"
+                         f"Tirante aguas abajo (H) [m]   : {h_final:.4f}\n"
                          f"Carga efectiva (Z0) [m]       : {Z0_final:.3f}\n"
                          f"Cantidad de orificios (N)     : {n_val}\n"
                          f"Rugosidad de Manning (η)      : {eta_final:.4f}\n"
@@ -293,9 +301,9 @@ class AplicacionOrificios:
                          f"Diámetro calculado [m]        : {D_exacto:.4f}\n"
                          f"Diámetro constructivo (D) [m] : {D_redondeado:.2f}\n"
                          f"CAUDAL TOTAL resultante [m³/s]: {Q_final:.2f}")
-            self.ultimo_resultado = {'args': (D_redondeado, xi_final, n_val, f_friccion_final, mu_final, Q_final, L, eta_final, Z0_final, h_val),
+            self.ultimo_resultado = {'args': (D_redondeado, xi_final, n_val, f_friccion_final, mu_final, Q_final, L, eta_final, Z0_final, h_final),
                                      'kwargs': {'Q_target': Q_target, 'D_exacto': D_exacto, 'archivo': "resultados_optimizacion_gui.csv"}}
-            self.actualizar_grafico(Q_target, h_val)
+            self.actualizar_grafico(Q_final, h_final)
             
         self.mostrar_texto(resultado)
 
@@ -334,13 +342,13 @@ class AplicacionOrificios:
         
         # Separar los datos en los tres tramos desde el diccionario generado
         Q_tramo_libre = self.curva_data["T1"]["Q"]
-        H0_tramo_libre = self.curva_data["T1"]["H"]
+        H0_tramo_libre = self.curva_data["T1"]["H"] + 21.0
 
         Q_tramo2 = self.curva_data["T2"]["Q"]
-        H0_tramo2 = self.curva_data["T2"]["H"]
+        H0_tramo2 = self.curva_data["T2"]["H"] + 21.0
 
         Q_tramo3 = self.curva_data["T3"]["Q"]
-        H0_tramo3 = self.curva_data["T3"]["H"]
+        H0_tramo3 = self.curva_data["T3"]["H"] + 21.0
 
 
         self.ax_tab2.plot(Q_tramo_libre, H0_tramo_libre, linewidth=2.5, color='#1f77b4', 
@@ -367,10 +375,10 @@ class AplicacionOrificios:
                               textcoords="offset points", xytext=(-10, -12), ha='right', fontsize=9, color='darkred', fontweight='bold')
 
         self.ax_tab2.set_xlim(0, max(Q_tramo3) * 1.1)
-        self.ax_tab2.set_ylim(0, max(H0_tramo3) * 1.05)
+        self.ax_tab2.set_ylim(21.0, max(H0_tramo3) + 1.0)
 
         self.ax_tab2.set_xlabel("Caudal (Q) [m³/s]")
-        self.ax_tab2.set_ylabel("Tirante (H) [m]")
+        self.ax_tab2.set_ylabel("Cota IGN [m] (Nivel del Embalse)")
         self.ax_tab2.set_title("Curva de Descarga H-Q")
         self.ax_tab2.grid(True)
         self.ax_tab2.legend()
@@ -379,10 +387,10 @@ class AplicacionOrificios:
         # --- Actualizar Tab 3 (Verificación Zona 1) ---
         self.ax_tab3.clear()
         
-        H0_t1 = self.curva_data["T1"]["H"]
+        H0_t1 = self.curva_data["T1"]["H"] + 21.0
         Q_t1 = self.curva_data["T1"]["Q"]
         
-        H_canal_t1 = [calcular_H_desde_Q(q) for q in Q_t1]
+        H_canal_t1 = [calcular_H_desde_Q(q) + 21.0 for q in Q_t1]
         
         self.ax_tab3.plot(Q_t1, H0_t1, label="Cota Embalse (H0)", color='blue', linewidth=2)
         self.ax_tab3.plot(Q_t1, H_canal_t1, label="Cota Canal Aguas Abajo (H)", color='red', linestyle='--', linewidth=2)
@@ -397,7 +405,7 @@ class AplicacionOrificios:
                                   color='red', alpha=0.3, label='NO Verifica (H0 < H)', interpolate=True)
         
         self.ax_tab3.set_xlabel("Caudal (Q) [m³/s]")
-        self.ax_tab3.set_ylabel("Cota [m]")
+        self.ax_tab3.set_ylabel("Cota IGN [m] (Nivel del Embalse)")
         self.ax_tab3.set_title("Verificación de Escurrimiento (Zona 1)")
         self.ax_tab3.grid(True)
         self.ax_tab3.legend()
@@ -425,20 +433,20 @@ class AplicacionOrificios:
         Q_plena = Q_vals_tab4[-1]
         H0_plena = H0_vals_tab4[-1]
         
-        self.ax_tab4.plot(Q_vals_tab4, H0_vals_tab4, linewidth=2.5, color='#1f77b4', label='Curva de Descarga (Canal)')
-        self.ax_tab4.plot(Q_max_q, H0_max_q, marker='o', color='#ff7f0e', markersize=7, zorder=5, 
+        self.ax_tab4.plot(Q_vals_tab4, H0_vals_tab4 + 21.0, linewidth=2.5, color='#1f77b4', label='Curva de Descarga (Canal)')
+        self.ax_tab4.plot(Q_max_q, H0_max_q + 21.0, marker='o', color='#ff7f0e', markersize=7, zorder=5, 
                           label=f'Caudal Máximo (y = 0.938D)\nQ = {Q_max_q:.2f} $m^3/s$')
-        self.ax_tab4.plot(Q_plena, H0_plena, marker='o', color='#d62728', markersize=7, zorder=5, 
+        self.ax_tab4.plot(Q_plena, H0_plena + 21.0, marker='o', color='#d62728', markersize=7, zorder=5, 
                           label=f'Sección Plena (y = D)\nQ = {Q_plena:.2f} $m^3/s$')
         
         self.ax_tab4.set_title('Descarga Libre en Conductos Circulares (Tramo 1)', fontsize=12, fontweight='bold')
         self.ax_tab4.set_xlabel('Caudal Total Q [m³/s]', fontweight='bold')
-        self.ax_tab4.set_ylabel('Cota de embalse H0 [m]', fontweight='bold')
+        self.ax_tab4.set_ylabel('Cota IGN [m] (Nivel del Embalse)', fontweight='bold')
         self.ax_tab4.grid(True, linestyle='--', alpha=0.6)
         self.ax_tab4.legend(loc='lower right')
         
         self.ax_tab4.set_xlim(0, max(Q_vals_tab4) * 1.1)
-        self.ax_tab4.set_ylim(elevacion_base * 0.9, H0_max_plena * 1.1)
+        self.ax_tab4.set_ylim((elevacion_base * 0.9) + 21.0, (H0_max_plena * 1.1) + 21.0)
         self.canvas_tab4.draw()
         
         # Habilitar el botón de exportación

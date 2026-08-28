@@ -12,10 +12,20 @@ def main():
     a = param.a
     b = param.b
     c = param.c
-    d = param.d_opt
-    C0 = param.c0_opt
+    c0_vol = param.c0_opt
     
-    # Parámetro del vertedero obtenido de la parametrización global
+    a1 = param.a1_opt
+    b1 = param.b1_opt
+    c0_1 = param.c0_1_opt
+    
+    p2 = param.p2_opt
+    p1 = param.p1_opt
+    p0 = param.p0_opt
+    
+    d3 = param.d_opt
+    c0_3 = param.c0_3_opt
+    
+    q_orf_max = param.q_orf_max
     e = param.e_opt
     
     # 2. Cargar hidrograma de entrada (R=10000)
@@ -28,7 +38,7 @@ def main():
     
     # 3. Condiciones iniciales y configuración del modelo numérico
     # Asumimos que el nivel del agua arranca en la cota del descargador de fondo
-    Z_inicial = max(0.0, C0 - 21.00)
+    Z_inicial = max(0.0, c0_vol - 21.00)
     t_inicial = t_in[0]
     t_final = t_in[-1]
     
@@ -46,34 +56,31 @@ def main():
         # Derivada del volumen respecto a Z [hm3/m]
         Cota = Z + 21.00
         if Cota < 24.00:
-            return 0.01 / (24.00 - C0)
+            return 0.01 / (24.00 - c0_vol)
         return 2 * a * Z + b
 
     def get_volumen(Z):
         Cota = Z + 21.00
-        if Cota < C0:
+        if Cota < c0_vol:
             return 0.0
         elif Cota < 24.00:
-            return (0.01 / (24.00 - C0)) * (Cota - C0)
+            return (0.01 / (24.00 - c0_vol)) * (Cota - c0_vol)
         else:
             return a * Z**2 + b * Z + c
 
-    def Q_fondo(Z):
-        Cota = Z + 21.00
-        if Cota > 29.30:
-            return d * np.sqrt(29.30 - C0)
-        elif Cota > C0:
-            return d * np.sqrt(Cota - C0)
-        return 0.0
-        
-    def Q_vert(Z):
-        # Descarga libre del vertedero, cota de cresta 29.30m (Z = 8.30m)
-        if Z > 8.30:
-            return e * (np.maximum(0, Z - 8.30))**1.5
-        return 0.0
-
     def Q_total(Z):
-        return Q_fondo(Z) + Q_vert(Z)
+        Cota = Z + 21.00
+        if Cota <= c0_1:
+            return 0.0
+        elif Cota <= 22.7256: # Tramo 1 (Canal)
+            return a1 * max(0, Cota - c0_1)**b1
+        elif Cota <= 24.00: # Tramo 2 (Transición)
+            H = Cota - 21.0
+            return p2 * H**2 + p1 * H + p0
+        elif Cota <= 29.30: # Tramo 3 (Orificio)
+            return d3 * np.sqrt(max(0, Cota - c0_3))
+        else: # Tramo 4 (Orificios max + Vertedero)
+            return q_orf_max + e * max(0, Z - 8.30)**1.5
         
     # 5. Bucle de Integración Numérica (Esquema Explícito)
     print("\nIniciando cálculo de laminación para R=10000...")
@@ -125,7 +132,7 @@ def main():
     
     cota_sim = Z_sim + 21.00
     ax2.plot(tiempos / 3600, cota_sim, 'g-', label='Cota del Embalse (IGN)')
-    ax2.axhline(C0, color='k', linestyle='--', label=f'Cota Fondo ({C0:.2f} m)')
+    ax2.axhline(c0_vol, color='k', linestyle='--', label=f'Cota Fondo ({c0_vol:.2f} m)')
     ax2.axhline(29.30, color='orange', linestyle='--', label='Cota Vertedero (29.30 m)')
     ax2.axhline(30.50, color='purple', linestyle='--', label='NAME (30.50 m)')
     

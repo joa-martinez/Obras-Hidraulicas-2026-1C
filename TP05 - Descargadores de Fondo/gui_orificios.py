@@ -246,11 +246,11 @@ class AplicacionOrificios:
         H_vals = np.linspace(0, 4.5, 100)
         Q_vals = [calc_Q_reducida(h) for h in H_vals]
         
-        self.ax.plot(Q_vals, H_vals, label="Curva H-Q", color='#1f77b4', linewidth=2.5)
+        self.ax.plot(Q_vals, H_vals + 21.0, label="Curva H-Q", color='#1f77b4', linewidth=2.5)
         self.ax.set_xlim(0, 320)
-        self.ax.set_ylim(0, 4.5)
+        self.ax.set_ylim(21.0, 25.5)
         self.ax.set_xlabel("Caudal (Q) [m³/s]", fontweight='bold')
-        self.ax.set_ylabel("Tirante aguas abajo (H) [m]", fontweight='bold')
+        self.ax.set_ylabel("Cota IGN [m]", fontweight='bold')
         self.ax.set_title("Curva H-Q del Canal")
         self.ax.grid(True, linestyle='--', alpha=0.6)
         self.canvas.draw()
@@ -261,15 +261,15 @@ class AplicacionOrificios:
         H_vals = np.linspace(0, 4.5, 100)
         Q_vals = [calc_Q_reducida(h) for h in H_vals]
         
-        self.ax.plot(Q_vals, H_vals, label="Curva H-Q", color='#1f77b4', linewidth=2.5)
-        self.ax.plot(q_val, h_val, 'ro', markersize=8, label=f"Cálculo (Q={q_val:.2f}, H={h_val:.2f})")
+        self.ax.plot(Q_vals, H_vals + 21.0, label="Curva H-Q", color='#1f77b4', linewidth=2.5)
+        self.ax.plot(q_val, h_val + 21.0, 'ro', markersize=8, label=f"Cálculo (Q={q_val:.2f}, Cota IGN={h_val+21.0:.2f})")
         self.ax.axvline(q_val, color='red', linestyle='--', alpha=0.4)
-        self.ax.axhline(h_val, color='red', linestyle='--', alpha=0.4)
+        self.ax.axhline(h_val + 21.0, color='red', linestyle='--', alpha=0.4)
         
         self.ax.set_xlim(0, 320)
-        self.ax.set_ylim(0, 4.5)
+        self.ax.set_ylim(21.0, 25.5)
         self.ax.set_xlabel("Caudal (Q) [m³/s]", fontweight='bold')
-        self.ax.set_ylabel("Tirante aguas abajo (H) [m]", fontweight='bold')
+        self.ax.set_ylabel("Cota IGN [m]", fontweight='bold')
         self.ax.set_title("Curva H-Q del Canal")
         self.ax.grid(True, linestyle='--', alpha=0.6)
         self.ax.legend(loc="upper left")

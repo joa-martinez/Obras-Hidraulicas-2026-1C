@@ -7,8 +7,21 @@ def main():
     a = param.a
     b = param.b
     c = param.c
-    d = param.d_opt
-    C0 = param.c0_opt
+    c0_vol = param.c0_opt
+    
+    a1 = param.a1_opt
+    b1 = param.b1_opt
+    c0_1 = param.c0_1_opt
+    
+    p2 = param.p2_opt
+    p1 = param.p1_opt
+    p0 = param.p0_opt
+    
+    d3 = param.d_opt
+    c0_3 = param.c0_3_opt
+    
+    q_orf_max = param.q_orf_max
+    e = param.e_opt
     
     # 2. Cargar hidrograma de entrada R=100
     df_in = pd.read_csv('datos/Q_e100.csv')
@@ -16,7 +29,7 @@ def main():
     Q_in = df_in['Qe(m3/s)'].values
     I_func = interp1d(t_in, Q_in, bounds_error=False, fill_value=(0.0, Q_in[-1]))
     
-    Z_inicial = max(0.0, C0 - 21.00)
+    Z_inicial = max(0.0, c0_vol - 21.00)
     dt = 60.0
     tiempos = np.arange(t_in[0], t_in[-1] + dt, dt)
     
@@ -26,18 +39,22 @@ def main():
     def dV_dZ(Z):
         Cota = Z + 21.00
         if Cota < 24.00:
-            return 0.01 / (24.00 - C0)
+            return 0.01 / (24.00 - c0_vol)
         return 2 * a * Z + b
 
-    def Q_fondo(Z):
-        Cota = Z + 21.00
-        if Cota > C0:
-            return d * np.sqrt(Cota - C0)
-        return 0.0
-
-    # No hay vertedero activo o e=0 para laminacion100 antes de llegar a 29.3 (de hecho para R=100 la cota pico será cerca de 29.3)
     def Q_total(Z):
-        return Q_fondo(Z)
+        Cota = Z + 21.00
+        if Cota <= c0_1:
+            return 0.0
+        elif Cota <= 22.7256: # Tramo 1 (Canal)
+            return a1 * max(0, Cota - c0_1)**b1
+        elif Cota <= 24.00: # Tramo 2 (Transición)
+            H = Cota - 21.0
+            return p2 * H**2 + p1 * H + p0
+        elif Cota <= 29.30: # Tramo 3 (Orificio)
+            return d3 * np.sqrt(max(0, Cota - c0_3))
+        else: # Tramo 4 (Orificios max + Vertedero)
+            return q_orf_max + e * max(0, Z - 8.30)**1.5
         
     volumen_laminado_m3 = 0.0
     
@@ -65,7 +82,12 @@ def main():
     # The integration above goes until the END of the hydrograph, where volume might be depleted again.
     # Let's find the peak index:
     # Encontrar el indice exacto donde la cota cruza 29.30m
-    idx_2930 = np.where(cota_sim >= 29.30)[0][0]
+    indices_2930 = np.where(cota_sim >= 29.30)[0]
+    if len(indices_2930) > 0:
+        idx_2930 = indices_2930[0]
+    else:
+        # If it never reached 29.30, use the max cota reached
+        idx_2930 = np.argmax(cota_sim)
     
     # Recalcular volumen almacenado solo hasta idx_2930
     volumen_almacenado_2930_m3 = 0.0

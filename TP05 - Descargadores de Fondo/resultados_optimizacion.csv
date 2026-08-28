@@ -1,13 +1,13 @@
 Parámetro,Valor
 Caudal objetivo [m3/s],74.00
 Longitud del conducto (L) [m],5.00
-Tirante aguas abajo (H) [m],2.6750
-Carga efectiva (Z0) [m],5.625
-Cantidad de orificios (N),10
+Tirante aguas abajo (H) [m],2.7212
+Carga efectiva (Z0) [m],5.579
+Cantidad de orificios (N),7
 Rugosidad de Manning (eta),0.0150
 Coeficiente xi (xi),0.05
-Factor f(L/D),0.140
-Coeficiente mu (mu),0.917
-Diámetro calculado [m],0.9896
-Diámetro del orificio (D) constructivo [m],1.00
-CAUDAL TOTAL resultante [m3/s],75.63
+Factor f(L/D),0.110
+Coeficiente mu (mu),0.929
+Diámetro calculado [m],1.1754
+Diámetro del orificio (D) constructivo [m],1.20
+CAUDAL TOTAL resultante [m3/s],76.91
