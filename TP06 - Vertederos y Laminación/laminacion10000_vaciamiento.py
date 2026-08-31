@@ -1,7 +1,9 @@
+from numpy import absolute
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+import os
 
 # Importamos los parámetros dinámicamente desde el script provisto
 import parametrizacion as param
@@ -11,78 +13,86 @@ def main():
     a = param.a
     b = param.b
     c = param.c
-    d = param.d_opt
-    C0 = param.c0_opt
+    c0_vol = param.c0_opt
     
-    # Parámetro del vertedero, obtenido de la parametrización global
+    a1 = param.a1_opt
+    b1 = param.b1_opt
+    c0_1 = param.c0_1_opt
+    
+    p2 = param.p2_opt
+    p1 = param.p1_opt
+    p0 = param.p0_opt
+    
+    d3 = param.d_opt
+    c0_3 = param.c0_3_opt
+    
+    q_orf_max = param.q_orf_max
     e = param.e_opt
     
-    # 2. Cargar hidrograma de entrada
-    df_in = pd.read_csv('datos/Q_e100.csv')
+    # 2. Cargar hidrograma de entrada (R=10000)
+    df_in = pd.read_csv('datos/Q_e10000.csv')
     t_in = df_in['T(seg)'].values
-    Q_in = df_in['Qe(m3/s)'].values
+    Q_in = df_in['Q(m3/s)'].values
     
     # Función de interpolación para el caudal de entrada
     I_func = interp1d(t_in, Q_in, bounds_error=False, fill_value=(0.0, Q_in[-1]))
+    t_pico = t_in[np.argmax(Q_in)]
     
     # 3. Condiciones iniciales y configuración del modelo numérico
-    # Asumimos que el nivel del agua arranca en la cota de cresta del vertedero (embalse lleno)
-    Z_inicial = 29.30 - 21.00
+    # Asumimos que el nivel del agua arranca en la cota del descargador de fondo
+    Z_inicial = max(0.0, c0_vol - 21.00)
     t_inicial = t_in[0]
-    t_final = t_in[-1]
     
     dt = 30.0 # Paso de tiempo de integración en segundos
-    tiempos = np.arange(t_inicial, t_final + dt, dt)
     
-    Z_sim = np.zeros(len(tiempos))
-    Q_out_sim = np.zeros(len(tiempos))
-    V_sim = np.zeros(len(tiempos))
-    
-    Z_sim[0] = Z_inicial
-    
-    # 4. Funciones Hidráulicas (según datos/ecuaciones.md)
+    # Funciones Hidráulicas (según datos/ecuaciones.md)
     def dV_dZ(Z):
         # Derivada del volumen respecto a Z [hm3/m]
         Cota = Z + 21.00
         if Cota < 24.00:
-            return 0.01 / (24.00 - C0)
+            return 0.01 / (24.00 - c0_vol)
         return 2 * a * Z + b
 
     def get_volumen(Z):
         Cota = Z + 21.00
-        if Cota < C0:
+        if Cota < c0_vol:
             return 0.0
         elif Cota < 24.00:
-            return (0.01 / (24.00 - C0)) * (Cota - C0)
+            return (0.01 / (24.00 - c0_vol)) * (Cota - c0_vol)
         else:
             return a * Z**2 + b * Z + c
 
-    def Q_fondo(Z):
-        Cota = Z + 21.00
-        if Cota > 29.30:
-            return d * np.sqrt(29.30 - C0)
-        elif Cota > C0:
-            return d * np.sqrt(Cota - C0)
-        return 0.0
-        
-    def Q_vert(Z):
-        # Descarga libre del vertedero, cota de cresta 29.30m (Z = 8.30m)
-        if Z > 8.30:
-            return e * (np.maximum(0, Z - 8.30))**1.5
-        return 0.0
-
     def Q_total(Z):
-        return Q_fondo(Z) + Q_vert(Z)
+        Cota = Z + 21.00
+        if Cota <= c0_1:
+            return 0.0
+        elif Cota <= 22.7256: # Tramo 1 (Canal)
+            return a1 * max(0, Cota - c0_1)**b1
+        elif Cota <= 24.00: # Tramo 2 (Transición)
+            H = Cota - 21.0
+            return p2 * H**2 + p1 * H + p0
+        elif Cota <= 29.30: # Tramo 3 (Orificio)
+            return d3 * np.sqrt(max(0, Cota - c0_3))
+        else: # Tramo 4 (Orificios max + Vertedero)
+            return q_orf_max + e * max(0, Z - 8.30)**1.5
+            
+    # Listas para almacenar la simulación de largo plazo
+    Z_sim = [Z_inicial]
+    tiempos = [t_inicial]
+    Q_out_sim = []
+    V_sim = []
         
     # 5. Bucle de Integración Numérica (Esquema Explícito)
-    print("\nIniciando cálculo de laminación...")
-    for j in range(len(tiempos) - 1):
-        Z_actual = Z_sim[j]
-        I_actual = I_func(tiempos[j])
+    print("\nIniciando cálculo de laminación para R=10000 hasta vaciamiento...")
+    t_actual = t_inicial
+    
+    while True:
+        Z_actual = Z_sim[-1]
+        I_actual = I_func(t_actual)
         Q_actual = Q_total(Z_actual)
         
-        Q_out_sim[j] = Q_actual
-        V_sim[j] = get_volumen(Z_actual)
+        Q_out_sim.append(Q_actual)
+        V_sim.append(get_volumen(Z_actual))
         
         derivada_volumen_hm3 = dV_dZ(Z_actual)
         
@@ -95,11 +105,32 @@ def main():
         
         # Ecuación diferencial: dZ = ((I - Q) / V') * dt
         delta_Z = ((I_actual - Q_actual) / derivada_volumen_m3) * dt
-        Z_sim[j+1] = Z_actual + delta_Z
+        Z_new = Z_actual + delta_Z
         
-    # Completar el último paso
-    Q_out_sim[-1] = Q_total(Z_sim[-1])
-    V_sim[-1] = get_volumen(Z_sim[-1])
+        if Z_new < Z_inicial:
+            Z_new = Z_inicial
+            
+        Z_sim.append(Z_new)
+        t_actual += dt
+        tiempos.append(t_actual)
+        
+        # Condición de vaciamiento: ya pasó el pico y volvimos a la cota inicial
+        if t_actual > t_pico and (Z_new <= Z_inicial + 1e-4):
+            Q_out_sim.append(Q_total(Z_new))
+            V_sim.append(get_volumen(Z_new))
+            break
+            
+        # Límite de seguridad de 30 días
+        if t_actual > 30 * 24 * 3600:
+            print("Se alcanzó el límite de 30 días de simulación sin vaciarse por completo.")
+            Q_out_sim.append(Q_total(Z_new))
+            V_sim.append(get_volumen(Z_new))
+            break
+            
+    tiempos = np.array(tiempos)
+    Z_sim = np.array(Z_sim)
+    Q_out_sim = np.array(Q_out_sim)
+    V_sim = np.array(V_sim)
     
     # 6. Graficar Resultados
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
@@ -116,16 +147,17 @@ def main():
                  xy=(t_qmax_horas, q_max),
                  xytext=(10, -10), textcoords='offset points',
                  color='black', fontweight='bold')
-
+                 
     ax1.set_ylabel('Caudal [m3/s]')
-    ax1.set_title('Laminación del Embalse - Hidrogramas (Embalse Lleno)')
+    ax1.set_title('Laminación del Embalse hasta Vaciamiento - (Tr=10000 años)')
     ax1.legend()
     ax1.grid(True)
     
     cota_sim = Z_sim + 21.00
     ax2.plot(tiempos / 3600, cota_sim, 'g-', label='Cota del Embalse (IGN)')
-    ax2.axhline(C0, color='k', linestyle='--', label=f'Cota Fondo ({C0:.2f} m)')
+    ax2.axhline(c0_vol, color='k', linestyle='--', label=f'Cota Fondo ({c0_vol:.2f} m)')
     ax2.axhline(29.30, color='orange', linestyle='--', label='Cota Vertedero (29.30 m)')
+    ax2.axhline(30.50, color='purple', linestyle='--', label='NAME (30.50 m)')
     
     # Marcar Cota Máxima
     cota_max = np.max(cota_sim)
@@ -156,12 +188,16 @@ def main():
     ax3.grid(True)
     
     plt.tight_layout()
-    plt.savefig('./Gráficas/resultados_laminacion100_lleno.png')
+    plt.savefig('./Gráficas/resultados_laminacion10000_vaciamiento.png')
     print("Simulación completada con éxito.")
-    print("Gráfico de laminación guardado en './Gráficas/resultados_laminacion100_lleno.png'.")
+    print("Gráfico de laminación guardado en './Gráficas/resultados_laminacion10000_vaciamiento.png'.")
     
+    if cota_max > 30.50:
+        print(f"\nADVERTENCIA: La cota máxima ({cota_max:.2f} m) superó el NAME (30.50 m). PELIGRO DE DESBORDE!")
+    else:
+        print(f"\nLa presa no desborda. Revancha mínima: {30.50 - cota_max:.2f} m.")
+
     # 7. Exportar métricas de continuidad a CSV
-    import os
     vol_entrada_hm3 = np.trapezoid(I_func(tiempos), tiempos) / 1e6
     vol_salida_hm3 = np.trapezoid(Q_out_sim, tiempos) / 1e6
     delta_almacenamiento_hm3 = V_sim[-1] - V_sim[0]
@@ -172,9 +208,9 @@ def main():
     q_max_salida = np.max(Q_out_sim)
     vol_maximo = np.max(V_sim)
     
-    archivo_csv = 'resultados_continuidad.csv'
+    archivo_csv = 'resultados_continuidad_vaciamiento.csv'
     nueva_fila = pd.DataFrame([{
-        'Escenario': 'R=100 Lleno',
+        'Escenario': 'Tr=10000 (Vaciamiento)',
         'Q max Entrada (m3/s)': round(q_max_entrada, 2),
         'Q max Salida (m3/s)': round(q_max_salida, 2),
         'Vol Entrada (hm3)': round(vol_entrada_hm3, 4),

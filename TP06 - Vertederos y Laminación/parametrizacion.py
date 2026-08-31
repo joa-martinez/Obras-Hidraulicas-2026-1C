@@ -4,14 +4,13 @@ from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import os
+import sys
 
 # ==========================================
 # 1. Carga de Datos y Parametrización por Tramos (Piecewise)
 # ==========================================
 # Cargamos la tabla actualizada para los tramos 1, 2 y 3
 df_q_act = pd.read_csv('datos/curva_descarga_H-Q Actualizada.csv')
-# Cargamos la tabla original para el tramo del vertedero
-df_q_old = pd.read_csv('datos/curva_descarga_H-Q.csv')
 
 # --- TRAMO 1 (Canal) ---
 t1 = df_q_act[df_q_act['Tramo'].str.contains('Tramo 1')]
@@ -61,12 +60,40 @@ print(f"--- Tramo 3 (Orificio) ---")
 print(f"Q3 = {d_opt:.4f} * sqrt(Cota - {c0_3_opt:.4f})\n")
 
 # --- TRAMO 4 (Vertedero) ---
-t4 = df_q_old[df_q_old['Tramo'].str.contains('Vertedero')]
+q_orf_max = func_t3(8.30, d_opt, c0_3_z)
+
+# Tomamos la longitud del vertedero del argumento o usamos 55.0 por defecto
+print("\n--- Actualización del Vertedero ---")
+try:
+    L_str = sys.argv[1] if len(sys.argv) > 1 else "55.0"
+    L_vertedero = float(L_str)
+except ValueError:
+    print("Valor inválido. Usando L = 55.0 m por defecto.")
+    L_vertedero = 55.0
+
+# Calculamos los puntos teóricos y los guardamos en el CSV
+C_d = 4.03
+e_teorico = 0.552 * C_d * L_vertedero
+z_vert = np.linspace(8.31, 9.50, 50)
+q_vert = q_orf_max + e_teorico * (z_vert - 8.30)**1.5
+
+csv_path = 'datos/curva_descarga_H-Q.csv'
+df_csv = pd.read_csv(csv_path)
+df_csv = df_csv[~df_csv['Tramo'].str.contains('Vertedero')]
+df_new_t4 = pd.DataFrame({
+    'Caudal (Q) [m3/s]': q_vert,
+    'Tirante (H) [m]': z_vert,
+    'Tramo': ['Fondo (cte) + Vertedero'] * len(z_vert)
+})
+df_updated = pd.concat([df_csv, df_new_t4], ignore_index=True)
+df_updated.to_csv(csv_path, index=False)
+print(f"Archivo {csv_path} actualizado con L = {L_vertedero} m")
+
+# Procedemos con la parametrización como se venía haciendo
+t4 = df_updated[df_updated['Tramo'].str.contains('Vertedero')]
 z4 = t4['Tirante (H) [m]'].values
 q4 = t4['Caudal (Q) [m3/s]'].values
 cota4 = z4 + 21.0
-
-q_orf_max = func_t3(8.30, d_opt, c0_3_z)
 
 def func_t4(z, e):
     return q_orf_max + e * np.maximum(0, z - 8.30)**1.5
@@ -74,7 +101,7 @@ def func_t4(z, e):
 popt4, _ = curve_fit(func_t4, z4, q4, p0=[100.0])
 e_opt = popt4[0]
 
-print(f"--- Tramo 4 (Vertedero) ---")
+print(f"\n--- Tramo 4 (Vertedero) ---")
 print(f"Q4 = {q_orf_max:.4f} + {e_opt:.4f} * (Cota - 29.30)^1.5\n")
 
 # ==========================================
@@ -162,8 +189,9 @@ if __name__ == '__main__':
     plt.grid(True, which='minor', color='lightgray', linestyle='--', alpha=0.5)
 
     plt.tight_layout()
-    plt.savefig('curva_cota_caudal_detallada.png')
-    print("Gráfica de Cota-Caudal detallada (con ecuaciones) guardada en 'curva_cota_caudal_detallada.png'")
+    os.makedirs('Gráficas', exist_ok=True)
+    plt.savefig('Gráficas/curva_cota_caudal_detallada.png')
+    print("Gráfica de Cota-Caudal detallada (con ecuaciones) guardada en 'Gráficas/curva_cota_caudal_detallada.png'")
 
     # ==========================================
     # 4. Gráfica Combinada: Cota-Volumen y Cota-Caudal (Menos Detallada)
@@ -222,8 +250,8 @@ if __name__ == '__main__':
     ax2.legend(loc='lower right')
     
     plt.tight_layout()
-    plt.savefig('curva_cota_volumen_y_caudal.png')
-    print("Gráfica combinada guardada en 'curva_cota_volumen_y_caudal.png'")
+    plt.savefig('Gráficas/curva_cota_volumen_y_caudal.png')
+    print("Gráfica combinada guardada en 'Gráficas/curva_cota_volumen_y_caudal.png'")
 
     # ==========================================
     # 5. Gráfica: Volumen vs Caudal
@@ -256,5 +284,5 @@ if __name__ == '__main__':
     plt.legend(loc='lower right')
     
     plt.tight_layout()
-    plt.savefig('curva_volumen_caudal.png')
-    print("Gráfica de Volumen-Caudal guardada en 'curva_volumen_caudal.png'")
+    plt.savefig('Gráficas/curva_volumen_caudal.png')
+    print("Gráfica de Volumen-Caudal guardada en 'Gráficas/curva_volumen_caudal.png'")

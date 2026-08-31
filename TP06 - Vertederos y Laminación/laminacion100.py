@@ -109,7 +109,7 @@ def main():
     V_sim[-1] = get_volumen(Z_sim[-1])
     
     # 6. Graficar Resultados
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
     
     ax1.plot(tiempos / 3600, I_func(tiempos), 'b-', label='Caudal Ingreso (I)')
     ax1.plot(tiempos / 3600, Q_out_sim, 'r-', label='Caudal Salida (Q total)')
@@ -144,15 +144,28 @@ def main():
                  xytext=(10, 5), textcoords='offset points',
                  color='red', fontweight='bold')
                  
-    ax2.set_xlabel('Tiempo [horas]')
     ax2.set_ylabel('Cota IGN [m]')
     ax2.legend()
     ax2.grid(True)
     
+    dt_array = np.diff(tiempos)
+    I_eval = I_func(tiempos)
+    area_in = np.zeros(len(tiempos))
+    area_out = np.zeros(len(tiempos))
+    area_in[1:] = np.cumsum((I_eval[:-1] + I_eval[1:]) / 2.0 * dt_array) / 1e6
+    area_out[1:] = np.cumsum((Q_out_sim[:-1] + Q_out_sim[1:]) / 2.0 * dt_array) / 1e6
+    volumen_por_areas = V_sim[0] + area_in - area_out
+    
+    ax3.plot(tiempos / 3600, volumen_por_areas, 'm-', label='Volumen del Embalse (Balance)')
+    ax3.set_xlabel('Tiempo [horas]')
+    ax3.set_ylabel('Volumen [hm3]')
+    ax3.legend()
+    ax3.grid(True)
+    
     plt.tight_layout()
-    plt.savefig('./resultados_laminacion.png')
+    plt.savefig('./Gráficas/resultados_laminacion.png')
     print("Simulación completada con éxito.")
-    print("Gráfico de laminación guardado en './resultados_laminacion.png'.")
+    print("Gráfico de laminación guardado en './Gráficas/resultados_laminacion.png'.")
     
     # 7. Exportar métricas de continuidad a CSV
     import os
